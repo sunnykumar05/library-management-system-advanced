@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Library Management System</title>
+    <style>
+        /* Keyframes for animations */
+        @keyframes fadeSlideIn {
+            0% {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes gradientBG {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        /* Styling the container with animations */
+        .container {
+            animation: fadeSlideIn 1s ease-out;
+        }
+
+        /* Root theme variables */
+        :root {
+            --bg-light: #f5f7fa;
+            --bg-dark: #1e1e2f;
+            --card-light: #ffffff;
+            --card-dark: #2a2a40;
+            --primary: #5e60ce;
+            --secondary: #3a0ca3;
+            --accent: #f72585;
+            --text-light: #222;
+            --text-dark: #eee;
+            --shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Body and theme settings */
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            padding: 20px;
+            background: linear-gradient(-45deg, #f0f2f5, #d9e4f5, #c3dafe, #dee2ff);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            color: var(--text-light);
+            transition: background 0.4s, color 0.4s;
+        }
+
+        body.dark {
+            background: var(--bg-dark);
+            color: var(--text-dark);
+        }
+
+        /* Title and button styles */
+        h2 {
+            font-size: 28px;
+            color: var(--primary);
+            margin-top: 30px;
+            margin-bottom: 10px;
+        }
+
+        .toggle-theme {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 8px 14px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+        }
+
+        /* Form and input styles */
+        form,
+        .student,
+        .book {
+            background: var(--card-light);
+            padding: 20px;
+            border-radius: 16px;
+            margin: 15px 0;
+            box-shadow: var(--shadow);
+            transition: background 0.3s ease, transform 0.2s ease;
+        }
+
+        body.dark form,
+        body.dark .student,
+        body.dark .book {
+            background: var(--card-dark);
+        }
+
+        form:hover,
+        .student:hover {
+            transform: scale(1.01);
+        }
+
+        input,
+        button {
+            padding: 10px;
+            font-size: 16px;
+            margin: 6px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            transition: all 0.2s ease;
+        }
+
+        input:focus {
+            border-color: var(--primary);
+            outline: none;
+        }
+
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: var(--secondary);
+        }
+
+        .student-books {
+            margin-left: 20px;
+        }
+
+        .student-books img {
+            width: 60px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 6px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            margin-top: 10px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .pagination {
+            margin: 10px 0;
+        }
+
+        .pagination button {
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 8px 12px;
+            margin: 0 5px;
+            font-weight: bold;
+        }
+
+        .pagination button:hover {
+            background: var(--secondary);
+        }
+
+        #searchInput {
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .student strong {
+            font-size: 18px;
+            color: var(--accent);
+        }
+    </style>
+</head>
+
+<body>
+    <button class="toggle-theme" onclick="toggleTheme()">🌗 Toggle Theme</button>
+
+    <h2>Library Management System</h2>
+    <h3>Add Student</h3>
+    <form id="studentForm">
+        <input type="text" id="studentName" placeholder="Student Name" required />
+        <input type="text" id="studentRoll" placeholder="Roll Number" required />
+        <button type="submit">Add Student</button>
+    </form>
+
+    <input type="text" id="searchInput" placeholder="Search Students" oninput="searchStudents()" />
+
+    <div class="pagination" id="pagination"></div>
+
+    <div class="manage" id="libraryContainer">
+        <h2>Manage Students and Books</h2>
+    </div>
+
+    <button onclick="exportToCSV()">📤 Export to CSV</button>
+
+    <script>
+        let students = JSON.parse(localStorage.getItem("students")) || [];
+        let currentPage = 1;
+        const studentsPerPage = 3;
+
+        const studentForm = document.getElementById("studentForm");
+        const studentName = document.getElementById("studentName");
+        const studentRoll = document.getElementById("studentRoll");
+        const libraryContainer = document.getElementById("libraryContainer");
+        const searchInput = document.getElementById("searchInput");
+        const pagination = document.getElementById("pagination");
+
+        // Render students function
+        function renderStudents() {
+            libraryContainer.innerHTML = '<h2>Manage Students and Books</h2>';
+            const filtered = students.filter(s =>
+                s.name.toLowerCase().includes(searchInput.value.toLowerCase())
+            );
+            const start = (currentPage - 1) * studentsPerPage;
+            const end = start + studentsPerPage;
+            const paginated = filtered.slice(start, end);
+
+            paginated.forEach((student, index) => {
+                const div = document.createElement("div");
+                div.className = "student";
+
+                div.innerHTML = ` 
+                    <strong>${student.name}</strong> (Roll: ${student.roll}) 
+                    <button onclick="toggleBooks(${start + index})">Manage Books</button>
+                    <button onclick="deleteStudent(${start + index})">Delete Student</button>
+                    <div class="student-books hidden" id="books-${start + index}">
+                        <form onsubmit="addBook(event, ${start + index})">
+                            <input type="text" placeholder="Title" id="book-title-${start + index}" required />
+                            <input type="text" placeholder="Author" id="book-author-${start + index}" required />
+                            <input type="file" accept="image/*" id="book-cover-${start + index}" />
+                            <button type="submit">Add Book</button>
+                        </form>
+                        <div id="book-list-${start + index}">
+                            ${renderBooks(student.books, start + index)}
+                        </div>
+                        <p><strong>Books Count: </strong> ${student.books.length}</p>
+                    </div>
+                `;
+                libraryContainer.appendChild(div);
+            });
+
+            renderPagination(filtered.length);
+        }
+
+        // Render books for each student
+        function renderBooks(books, studentIndex) {
+            return books.map((book, i) => `
+                <div class="book">
+                    <strong>${book.title}</strong> by ${book.author}
+                    ${book.cover ? `<br/><img src="${book.cover}" alt="cover" />` : ""}
+                    <button onclick="removeBook(${studentIndex}, ${i})">Remove</button>
+                </div>
+            `).join("");
+        }
+
+        // Render pagination buttons
+        function renderPagination(total) {
+            pagination.innerHTML = "";
+            const totalPages = Math.ceil(total / studentsPerPage);
+            for (let i = 1; i <= totalPages; i++) {
+                const btn = document.createElement("button");
+                btn.textContent = i;
+                btn.onclick = () => {
+                    currentPage = i;
+                    renderStudents();
+                };
+                if (i === currentPage) btn.style.fontWeight = "bold";
+                pagination.appendChild(btn);
+            }
+        }
+
+        // Toggle books visibility
+        function toggleBooks(index) {
+            const div = document.getElementById(`books-${index}`);
+            div.classList.toggle("hidden");
+        }
+
+        studentForm.onsubmit = (e) => {
+            e.preventDefault();
+            const student = {
+                name: studentName.value,
+                roll: studentRoll.value,
+                books: [],
+            };
+            students.push(student);
+            localStorage.setItem("students", JSON.stringify(students));
+            studentForm.reset();
+            renderStudents();
+        };
+
+        // Add book to student
+        function addBook(event, studentIndex) {
+            event.preventDefault();
+            const title = document.getElementById(`book-title-${studentIndex}`).value;
+            const author = document.getElementById(`book-author-${studentIndex}`).value;
+            const fileInput = document.getElementById(`book-cover-${studentIndex}`);
+            const file = fileInput.files[0];
+
+            const reader = new FileReader();
+            reader.onload = function () {
+                const cover = file ? reader.result : null;
+                students[studentIndex].books.push({ title, author, cover });
+                localStorage.setItem("students", JSON.stringify(students));
+                renderStudents();
+            };
+            if (file) {
+                reader.readAsDataURL(file);
+            } else {
+                students[studentIndex].books.push({ title, author });
+                localStorage.setItem("students", JSON.stringify(students));
+                renderStudents();
+            }
+        }
+
+        // Remove book from student
+        function removeBook(studentIndex, bookIndex) {
+            if (confirm("Are you sure you want to remove this book?")) {
+                students[studentIndex].books.splice(bookIndex, 1);
+                localStorage.setItem("students", JSON.stringify(students));
+                renderStudents();
+            }
+        }
+
+        // Delete student
+        function deleteStudent(index) {
+            if (confirm('Are you sure you want to delete this student?')) {
+                students.splice(index, 1);
+                localStorage.setItem("students", JSON.stringify(students));
+                renderStudents();
+            }
+        }
+
+        // Search students
+        function searchStudents() {
+            currentPage = 1;
+            renderStudents();
+        }
+
+        // Export data to CSV
+        function exportToCSV() {
+            const csvRows = [];
+            const headers = ['Name', 'Roll', 'Books'];
+            csvRows.push(headers.join(','));
+
+            students.forEach(student => {
+                const books = student.books.map(b => `${b.title} by ${b.author}`).join('; ');
+                csvRows.push([student.name, student.roll, books].join(','));
+            });
+
+            const csvContent = csvRows.join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'students.csv';
+            link.click();
+        }
+
+        // Toggle theme
+        function toggleTheme() {
+            document.body.classList.toggle("dark");
+        }
+
+        renderStudents(); // Render students when the page loads
+    </script>
+</body>
+
+</html>
